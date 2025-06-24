@@ -26,8 +26,8 @@ a {
 }
 .grid-container {
 	display: grid;
-	grid-template-columns: 24px auto 24px;
-	padding: 32px;
+	grid-template-columns: 36px auto 36px;
+	padding: 24px;
 	padding-left: 64px;
 	padding-right: 64px;
 	align-items: center;
