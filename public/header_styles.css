@@ -26,10 +26,10 @@ a {
 }
 .grid-container {
 	display: grid;
-	grid-template-columns: 36px auto 36px;
+	grid-template-columns: 250px auto 250px;
 	padding: 24px;
-	padding-left: 64px;
-	padding-right: 64px;
+	padding-left: 120px;
+	padding-right: 120px;
 	align-items: center;
 	box-shadow: 0 2px 9px #ae2ee965;
 }
@@ -38,9 +38,10 @@ a {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 1.8em;
 }
-
+.grid-item i {
+	font-size: 30px;
+}
 #upload {
 	justify-content: flex-start;
 }
