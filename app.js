@@ -1,121 +1,86 @@
-// 필요한 모듈을 가져옵니다.
-const express = require("express");
-const bcrypt = require("bcryptjs");
+const express = require('express');
+const path = require('path');
+const bodyParser = require('body-parser');
+const session = require('express-session');
 
-const session = require("express-session"); // 사용자 세션 관리를 위한 express-session 모듈
-require("dotenv").config(); // .env 파일에서 환경 변수를 불러옵니다.
-
-//파일 업로드 기능을 위한 미들웨어
-const multer = require("multer"); // multer 모듈 추가
-const path = require("path");
-
-// Express 애플리케이션을 초기화합니다.
 const app = express();
+const port = 3000;
 
-const PORT = process.env.PORT || 3000;
+// 로컬 유저 저장용 변수 (DB 대신)
+const users = [];
 
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ limit: "10mb", extended: true }));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
-// JSON 및 URL-encoded 데이터 파싱 미들웨어를 추가합니다.
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(session({
+  secret: 'secret_key',
+  resave: false,
+  saveUninitialized: true
+}));
 
-// 화면 엔진을 EJS로 설정하여 템플릿을 렌더링합니다.
-app.set("view engine", "ejs");
-
-// 정적 파일 경로 설정
-app.use("/public", express.static("public"));
-
-app.use(
-	session({
-		secret: "your_secret_key", // 비밀 키 설정
-		resave: false,
-		saveUninitialized: true,
-		cookie: { secure: false }, // HTTPS 환경에서 secure: true 설정
-	})
-);
-
-// Multer 파일 업로드 설정
-const storage = multer.diskStorage({
-	destination: (req, file, cb) => {
-		cb(null, "uploads/"); // 파일 저장 경로
-	},
-	filename: (req, file, cb) => {
-		cb(null, Date.now() + path.extname(file.originalname)); // 파일 이름 설정
-	},
-});
-const upload = multer({ storage: storage }); // multer 설정 완료
-const moment = require("moment"); // moment 모듈 가져오기 (시간 포맷을 위한)
-
-// 인증 확인 미들웨어
-function isAuthenticated(req, res, next) {
-	if (req.session.userId) {
-		return next();
-	}
-	res.status(401).send("You need to log in");
-}
-
-// 날짜 포맷 함수 추가
-function formatDate(dateString) {
-	const date = new Date(dateString);
-	const year = date.getFullYear();
-	const month = String(date.getMonth() + 1).padStart(2, "0"); // 월 2자리 포맷
-	const day = String(date.getDate()).padStart(2, "0"); // 일 2자리 포맷
-	return `${year}년 ${month}월 ${day}일`;
-}
-
-// 시간 차이 계산 함수 (서버에서 처리)
-function timeAgo(createdAt) {
-	const now = new Date();
-	const diffInSeconds = Math.floor((now - new Date(createdAt)) / 1000);
-	const diffInMinutes = Math.floor(diffInSeconds / 60);
-	const diffInHours = Math.floor(diffInMinutes / 60);
-	const diffInDays = Math.floor(diffInHours / 24);
-
-	if (diffInMinutes < 1) {
-		return "방금 전";
-	} else if (diffInMinutes < 60) {
-		return `${diffInMinutes}분 전`;
-	} else if (diffInHours < 24) {
-		return `${diffInHours}시간 전`;
-	} else {
-		return `${diffInDays}일 전`;
-	}
-}
-
-// 시간 표기 함수 수정
-function formatTime(createdAt, format = "YYYY-MM-DD HH:mm") {
-	return moment(createdAt).format(format);
-}
-
-//메인 페이지
-app.get("/", (req, res) => {
-	res.render("index");
+// 메인 페이지
+app.get('/', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+  res.render('index', { user: req.session.user });
 });
 
-//페이지 불러오기
-// views 폴더 내 .ejs 파일 이름들을 자동으로 읽어서 allowedPages에 저장
-const fs = require("fs");
-const pathpage = require("path");
-
-// views 폴더 내 .ejs 파일 이름들을 자동으로 읽어서 allowedPages에 저장
-const viewsDir = path.join(__dirname, "views");
-const allowedPages = fs
-	.readdirSync(viewsDir)
-	.filter((file) => path.extname(file) === ".ejs")
-	.map((file) => path.basename(file, ".ejs")); // 확장자 제거
-
-app.get("/:page", (req, res) => {
-	const pageName = req.params.page;
-	if (allowedPages.includes(pageName)) {
-		res.render(pageName);
-	} else {
-		res.status(404).render("404");
-	}
+// 회원가입 페이지
+app.get('/register', (req, res) => {
+  res.render('register');
 });
 
-// 서버를 시작하고 설정된 포트에서 요청을 수신합니다.
-app.listen(PORT, () => {
-	console.log(`Server running on http://localhost:${PORT}`);
+// 회원가입 처리
+app.post('/register', (req, res) => {
+  const { name, student_id } = req.body;
+
+  if (!name || !student_id) {
+    return res.send('이름과 학번을 모두 입력해주세요.');
+  }
+
+  // 중복 체크
+  const existing = users.find(u => u.student_id === student_id);
+  if (existing) {
+    return res.send('이미 등록된 학번입니다.');
+  }
+
+  users.push({ name, student_id });
+  res.redirect('/login');
+});
+
+// 로그인 페이지
+app.get('/login', (req, res) => {
+  res.render('login');
+});
+
+// 로그인 처리
+app.post('/login', (req, res) => {
+  const { name, student_id } = req.body;
+
+  if (!name || !student_id) {
+    return res.send('이름과 학번을 모두 입력해주세요.');
+  }
+
+  const user = users.find(u => u.name === name && u.student_id === student_id);
+  if (!user) {
+    return res.send('로그인 정보가 잘못되었습니다.');
+  }
+
+  req.session.user = user;
+  res.redirect('/');
+});
+
+// 로그아웃
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/login');
+  });
+});
+
+// 서버 실행
+app.listen(port, () => {
+  console.log(`서버가 실행 중: http://localhost:${port}`);
 });
