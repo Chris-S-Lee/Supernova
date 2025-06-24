@@ -32,6 +32,12 @@ header h1 {
 	place-items: center;
 }
 
+.card-container {
+	width: 90%;
+	max-width: 800px;
+	min-width: 240px;
+}
+
 .card {
 	background-color: white;
 	border-radius: 16px;
@@ -39,9 +45,6 @@ header h1 {
 	box-shadow: 2px 2px 9px #ae2ee965;
 	transition: transform 0.2s ease;
 	cursor: pointer;
-	width: 90%;
-	max-width: 800px;
-	min-width: 240px;
 }
 
 .card:hover {
