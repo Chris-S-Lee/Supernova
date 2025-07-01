@@ -11,3 +11,39 @@
 		<%-include("header.ejs") %>
 	</body>
 </html>
+<form method="POST" action="/borrow">
+  <label>대여 날짜:
+    <input type="date" name="date" id="datePicker" required />
+  </label>
+
+  <label>시간 선택:
+    <select name="timeSlot" required>
+      <option value="AM">오전</option>
+      <option value="PM">오후</option>
+    </select>
+  </label>
+
+  <label>노트북 선택:
+    <select name="laptopNumber" required>
+      <% for (let i = 1; i <= 20; i++) { 
+           const isRented = rentals.find(r => r.date === new Date().toISOString().slice(0, 10) && r.laptopNumber == i);
+      %>
+        <option value="<%= i %>" <%= isRented ? 'disabled' : '' %>>노트북 <%= i %></option>
+      <% } %>
+    </select>
+  </label>
+
+  <button type="submit">대여하기</button>
+</form>
+
+<script>
+  const dateInput = document.getElementById('datePicker');
+  dateInput.min = new Date().toISOString().split('T')[0];
+  dateInput.addEventListener('change', function () {
+    const date = new Date(this.value);
+    if (date.getDay() === 0 || date.getDay() === 6) {
+      alert('주말은 대여가 불가능합니다.');
+      this.value = '';
+    }
+  });
+</script>

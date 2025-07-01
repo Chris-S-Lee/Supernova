@@ -84,3 +84,48 @@ app.get('/logout', (req, res) => {
 app.listen(port, () => {
   console.log(`서버가 실행 중: http://localhost:${port}`);
 });
+
+// 대여 목록 (메모리 사용)
+const rentals = [];
+
+// 대여 페이지
+app.get('/borrow', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
+
+  const today = new Date();
+  const weekdayRentals = rentals.filter(r => {
+    const date = new Date(r.date);
+    return date >= today;
+  });
+
+  res.render('borrow', {
+    user: req.session.user,
+    rentals: weekdayRentals
+  });
+});
+
+// 대여 처리
+app.post('/borrow', (req, res) => {
+  const { laptopNumber, date, timeSlot } = req.body;
+
+  // 이미 대여된 노트북인지 확인
+  const alreadyRented = rentals.find(
+    r => r.laptopNumber === laptopNumber && r.date === date && r.timeSlot === timeSlot
+  );
+
+  if (alreadyRented) {
+    return res.send('이미 대여된 노트북입니다.');
+  }
+
+  rentals.push({
+    name: req.session.user.name,
+    student_id: req.session.user.student_id,
+    laptopNumber,
+    date,
+    timeSlot
+  });
+
+  res.send('대여가 완료되었습니다!');
+});
