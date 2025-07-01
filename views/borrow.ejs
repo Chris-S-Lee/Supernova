@@ -1,49 +1,61 @@
 <!DOCTYPE html>
 <html lang="ko">
-	<head>
-		<meta charset="UTF-8" />
-		<link rel="stylesheet" href="/public/borrow_styles.css" />
-		<link rel="icon" type="image/x-icon" href="/public/favicon.png" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>노트북 대여하기</title>
-	</head>
-	<body>
-		<%-include("header.ejs") %>
-	</body>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="/public/borrow_styles.css" />
+  <link rel="icon" type="image/x-icon" href="/public/favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>노트북 대여하기</title>
+</head>
+<body>
+  <%- include("header.ejs") %>
+
+  <main class="borrow-container">
+    <h2>노트북 대여 신청</h2>
+
+    <form method="POST" action="/borrow" class="borrow-form">
+      <label for="date">📅 대여 날짜</label>
+      <input type="date" name="date" id="datePicker" required />
+
+      <label for="timeSlot">⏰ 시간 선택</label>
+      <select name="timeSlot" required>
+        <option value="AM">오전</option>
+        <option value="PM">오후</option>
+      </select>
+
+      <label for="laptopNumber">💻 노트북 번호</label>
+      <select name="laptopNumber" required>
+        <% for (let i = 1; i <= 20; i++) {
+            const conflict = rentals.find(r =>
+              r.date === new Date().toISOString().slice(0, 10) &&
+              r.laptopNumber == i &&
+              r.timeSlot === 'AM' // 기본값 확인용 (선택된 시간과 비교도 가능)
+            );
+        %>
+          <option value="<%= i %>" <%= conflict ? "disabled" : "" %>>
+            노트북 <%= i %> <%= conflict ? "(대여중)" : "" %>
+          </option>
+        <% } %>
+      </select>
+
+      <button type="submit">📥 대여 신청</button>
+    </form>
+  </main>
+
+  <%- include("footer.ejs") %>
+
+  <script>
+    const dateInput = document.getElementById('datePicker');
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
+
+    dateInput.addEventListener('change', function () {
+      const selected = new Date(this.value);
+      if (selected.getDay() === 0 || selected.getDay() === 6) {
+        alert('주말은 대여가 불가능합니다.');
+        this.value = '';
+      }
+    });
+  </script>
+</body>
 </html>
-<form method="POST" action="/borrow">
-  <label>대여 날짜:
-    <input type="date" name="date" id="datePicker" required />
-  </label>
-
-  <label>시간 선택:
-    <select name="timeSlot" required>
-      <option value="AM">오전</option>
-      <option value="PM">오후</option>
-    </select>
-  </label>
-
-  <label>노트북 선택:
-    <select name="laptopNumber" required>
-      <% for (let i = 1; i <= 20; i++) { 
-           const isRented = rentals.find(r => r.date === new Date().toISOString().slice(0, 10) && r.laptopNumber == i);
-      %>
-        <option value="<%= i %>" <%= isRented ? 'disabled' : '' %>>노트북 <%= i %></option>
-      <% } %>
-    </select>
-  </label>
-
-  <button type="submit">대여하기</button>
-</form>
-
-<script>
-  const dateInput = document.getElementById('datePicker');
-  dateInput.min = new Date().toISOString().split('T')[0];
-  dateInput.addEventListener('change', function () {
-    const date = new Date(this.value);
-    if (date.getDay() === 0 || date.getDay() === 6) {
-      alert('주말은 대여가 불가능합니다.');
-      this.value = '';
-    }
-  });
-</script>

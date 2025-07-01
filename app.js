@@ -1,90 +1,74 @@
-const express = require('express');
-const path = require('path');
-const bodyParser = require('body-parser');
-const session = require('express-session');
+// 필요한 모듈을 가져옵니다.
+const express = require("express");
 
+const session = require("express-session"); // 사용자 세션 관리를 위한 express-session 모듈
+require("dotenv").config(); // .env 파일에서 환경 변수를 불러옵니다.
+
+//파일 업로드 기능을 위한 미들웨어
+const path = require("path");
+
+// Express 애플리케이션을 초기화합니다.
 const app = express();
-const port = 3000;
 
-// 로컬 유저 저장용 변수 (DB 대신)
-const users = [];
+const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-app.use(session({
-  secret: 'secret_key',
-  resave: false,
-  saveUninitialized: true
-}));
+// JSON 및 URL-encoded 데이터 파싱 미들웨어를 추가합니다.
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// 메인 페이지
-app.get('/', (req, res) => {
-  if (!req.session.user) {
-    return res.redirect('/login');
-  }
-  res.render('index', { user: req.session.user });
+// 화면 엔진을 EJS로 설정하여 템플릿을 렌더링합니다.
+app.set("view engine", "ejs");
+
+// 정적 파일 경로 설정
+app.use("/public", express.static("public"));
+
+app.use(
+	session({
+		secret: "your_secret_key", // 비밀 키 설정
+		resave: false,
+		saveUninitialized: true,
+		cookie: { secure: false }, // HTTPS 환경에서 secure: true 설정
+	})
+);
+
+// 모든 라우터 전에 sessionId를 res.locals에 설정
+app.use((req, res, next) => {
+	res.locals.sessionId = req.session.userId || "none";
+	next();
 });
 
-// 회원가입 페이지
-app.get('/register', (req, res) => {
-  res.render('register');
+//메인 페이지
+app.get("/", (req, res) => {
+	res.render("index");
 });
 
-// 회원가입 처리
-app.post('/register', (req, res) => {
-  const { name, student_id } = req.body;
+//페이지 불러오기
+// views 폴더 내 .ejs 파일 이름들을 자동으로 읽어서 allowedPages에 저장
+const fs = require("fs");
 
-  if (!name || !student_id) {
-    return res.send('이름과 학번을 모두 입력해주세요.');
-  }
+// views 폴더 내 .ejs 파일 이름들을 자동으로 읽어서 allowedPages에 저장
+const viewsDir = path.join(__dirname, "views");
+const allowedPages = fs
+	.readdirSync(viewsDir)
+	.filter((file) => path.extname(file) === ".ejs")
+	.map((file) => path.basename(file, ".ejs")); // 확장자 제거
 
-  // 중복 체크
-  const existing = users.find(u => u.student_id === student_id);
-  if (existing) {
-    return res.send('이미 등록된 학번입니다.');
-  }
-
-  users.push({ name, student_id });
-  res.redirect('/login');
+app.get("/:page", (req, res) => {
+	const pageName = req.params.page;
+	if (allowedPages.includes(pageName)) {
+		res.render(pageName);
+	} else {
+		res.status(404).render("404");
+	}
 });
 
-// 로그인 페이지
-app.get('/login', (req, res) => {
-  res.render('login');
+// 서버를 시작하고 설정된 포트에서 요청을 수신합니다.
+app.listen(PORT, () => {
+	console.log(`Server running on http://localhost:${PORT}`);
 });
-
-// 로그인 처리
-app.post('/login', (req, res) => {
-  const { name, student_id } = req.body;
-
-  if (!name || !student_id) {
-    return res.send('이름과 학번을 모두 입력해주세요.');
-  }
-
-  const user = users.find(u => u.name === name && u.student_id === student_id);
-  if (!user) {
-    return res.send('로그인 정보가 잘못되었습니다.');
-  }
-
-  req.session.user = user;
-  res.redirect('/');
-});
-
-// 로그아웃
-app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/login');
-  });
-});
-
-// 서버 실행
-app.listen(port, () => {
-  console.log(`서버가 실행 중: http://localhost:${port}`);
-});
-
 // 대여 목록 (메모리 사용)
 const rentals = [];
 
