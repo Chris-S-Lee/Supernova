@@ -199,6 +199,9 @@ app.post("/borrow", async (req, res) => {
 
     // ✅ 연체 여부 확인
     const reservations = await db.collection("reservations").find({ studentId: user.studentId }).toArray();
+    
+    // ✅ 여기서 연체 일수 계산
+    const totalOverdue = calculateOverdueDays(reservations);
 
     if (totalOverdue > 0) {
       return res.send(`<script>alert('연체 기한이 ${totalOverdue}일 남았으므로, 대출이 제한됩니다.'); window.location.href = '/status';</script>`);
@@ -213,6 +216,7 @@ app.post("/borrow", async (req, res) => {
       status: "대기중",
       createdAt: new Date(),
     });
+
 
     // 이메일 전송
     const transporter = nodemailer.createTransport({
