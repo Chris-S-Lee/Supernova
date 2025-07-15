@@ -19,7 +19,10 @@ app.use(
     secret: process.env.SESSION_SECRET || "your_secret_key",
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false },
+    cookie: {
+      secure: false,
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 7일 동안 로그인 유지
+    },
   })
 );
 
@@ -319,11 +322,35 @@ app.get("/admin/logout", (req, res) => {
 
 // 관리자 보호 미들웨어
 function requireAdmin(req, res, next) {
-  if (req.session.isAdmin) {
-    return next(); // 관리자만 통과
-  }
-  return res.status(403).send("접근 권한이 없습니다.");
+  if (req.session.isAdmin) return next();
+
+  // 전체 HTML 문서로 응답 (빈 화면 방지)
+  return res.send(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+      <meta charset="UTF-8" />
+      <title>접근 거부</title>
+      <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    </head>
+    <body>
+      <script>
+        document.addEventListener("DOMContentLoaded", function () {
+          Swal.fire({
+            icon: 'error',
+            title: '접근 거부',
+            text: '관리자만 접근 가능한 페이지입니다.',
+            confirmButtonText: '확인'
+          }).then(() => {
+            window.location.href = '/';
+          });
+        });
+      </script>
+    </body>
+    </html>
+  `);
 }
+
 
 
 // 관리자 페이지
